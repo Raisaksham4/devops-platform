@@ -31,7 +31,7 @@ resource "aws_instance" "myapp" {
   ami           = "ami-0f58b397bc5c1f2e8"
   instance_type = "t3.micro"
 
-  key_name = "mykeypair"
+  key_name = "devops-key"
 
   vpc_security_group_ids = [aws_security_group.myapp_sg.id]
 
