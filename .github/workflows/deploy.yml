@@ -7,7 +7,13 @@ on:
 
 jobs:
   deploy:
+  
     runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      APP_NAME: ${{ secrets.APP_NAME }}
 
     steps:
     - name: Checkout code
@@ -18,7 +24,7 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
-        aws-region: ap-south-1
+        aws-region: ${{ secrets.AWS_REGION }}
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
@@ -36,9 +42,6 @@ jobs:
       run: terraform apply -auto-approve
       working-directory: terraform
 
-    - name: Install jq
-      run: sudo apt-get install -y jq
-
     - name: Get EC2 Public IP
       run: |
         terraform output ec2_public_ip > ip.txt
@@ -51,17 +54,15 @@ jobs:
     # -------------------------
     - name: Login to ECR
       run: |
-        aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 065636181497.dkr.ecr.ap-south-1.amazonaws.com
-
+        aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
     - name: Build Docker image
       run: docker build -t myapp .
 
     - name: Tag image
-      run: docker tag myapp:latest 065636181497.dkr.ecr.ap-south-1.amazonaws.com/myapp:latest
+      run: docker tag myapp:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$APP_NAME:latest
 
     - name: Push to ECR
-      run: docker push 065636181497.dkr.ecr.ap-south-1.amazonaws.com/myapp:latest
-
+      run: docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$APP_NAME:latest
     # -------------------------
     # DEPLOY
     # -------------------------
@@ -70,15 +71,15 @@ jobs:
         echo "$EC2_SSH_KEY" > key.pem
         chmod 600 key.pem
 
-        ssh -o StrictHostKeyChecking=no -i key.pem ec2-user@$EC2_IP << 'EOF'
-          aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 065636181497.dkr.ecr.ap-south-1.amazonaws.com
+        ssh -o StrictHostKeyChecking=no -i key.pem ec2-user@$EC2_IP << EOF
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
-          docker stop myapp || true
-          docker rm myapp || true
+          docker stop $APP_NAME || true
+          docker rm $APP_NAME || true
 
-          docker pull 065636181497.dkr.ecr.ap-south-1.amazonaws.com/myapp:latest
+          docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$APP_NAME:latest
 
-          docker run -d -p 80:3000 --name myapp 065636181497.dkr.ecr.ap-south-1.amazonaws.com/myapp:latest
+          docker run -d -p 80:3000 --name $APP_NAME $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$APP_NAME:latest
         EOF
       env:
         EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}

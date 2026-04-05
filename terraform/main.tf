@@ -63,7 +63,7 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 # -------------------------
 resource "aws_instance" "myapp" {
   ami           = "ami-045443a70fafb8bbc"
-  instance_type = "t3.micro"
+  instance_type = "t2.micro"
 
   key_name = "devops-key"
 
