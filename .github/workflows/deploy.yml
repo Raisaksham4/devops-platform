@@ -7,7 +7,6 @@ on:
 
 jobs:
   deploy:
-  
     runs-on: ubuntu-latest
 
     env:
@@ -31,9 +30,6 @@ jobs:
       with:
         terraform_wrapper: false
 
-    # -------------------------
-    # TERRAFORM
-    # -------------------------
     - name: Terraform Init
       run: terraform init
       working-directory: terraform
@@ -49,32 +45,37 @@ jobs:
         printf "EC2_IP=%s\n" "$EC2_IP" >> $GITHUB_ENV
       working-directory: terraform
 
-    # -------------------------
-    # BUILD & PUSH
-    # -------------------------
     - name: Login to ECR
       run: |
         aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
     - name: Clone User Repo
       run: |
         git clone $APP_REPO_URL app
       env:
         APP_REPO_URL: ${{ secrets.APP_REPO_URL }}
 
-
     - name: Generate Dockerfile if missing
       run: |
         cd app
 
         if [ ! -f Dockerfile ]; then
-          echo "No Dockerfile found. Creating one..."
+          echo "No Dockerfile found. Detecting project type..."
 
-          echo 'FROM node:18' > Dockerfile
-          echo 'WORKDIR /app' >> Dockerfile
-          echo 'COPY . .' >> Dockerfile
-          echo 'RUN npm install' >> Dockerfile
-          echo 'EXPOSE 3000' >> Dockerfile
-          echo 'CMD ["node", "server.js"]' >> Dockerfile
+          if [ -f package.json ]; then
+            echo "Node.js project detected"
+
+            echo 'FROM node:18' > Dockerfile
+            echo 'WORKDIR /app' >> Dockerfile
+            echo 'COPY . .' >> Dockerfile
+            echo 'RUN npm install' >> Dockerfile
+            echo 'EXPOSE 3000' >> Dockerfile
+            echo 'CMD ["npm", "start"]' >> Dockerfile
+
+          else
+            echo "Unknown project type ❌"
+            exit 1
+          fi
         fi
 
     - name: Build Docker image
@@ -83,13 +84,11 @@ jobs:
         docker build -t $APP_NAME .
 
     - name: Tag image
-      run: docker tag myapp:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$APP_NAME:latest
+      run: docker tag $APP_NAME:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$APP_NAME:latest
 
     - name: Push to ECR
       run: docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$APP_NAME:latest
-    # -------------------------
-    # DEPLOY
-    # -------------------------
+
     - name: Deploy to EC2
       run: |
         echo "$EC2_SSH_KEY" > key.pem
@@ -108,9 +107,6 @@ jobs:
       env:
         EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
 
-    # -------------------------
-    # CLEANUP (FINAL STEP)
-    # -------------------------
     - name: Cleanup on failure
       if: failure()
       run: terraform destroy -auto-approve
