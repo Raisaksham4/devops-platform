@@ -55,8 +55,34 @@ jobs:
     - name: Login to ECR
       run: |
         aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+    - name: Clone User Repo
+      run: |
+        git clone $APP_REPO_URL app
+      env:
+        APP_REPO_URL: ${{ secrets.APP_REPO_URL }}
+
+
+    - name: Generate Dockerfile if missing
+      run: |
+        cd app
+
+        if [ ! -f Dockerfile ]; then
+          echo "No Dockerfile found. Creating one..."
+
+          cat <<EOF > Dockerfile
+          FROM node:18
+          WORKDIR /app
+          COPY . .
+          RUN npm install
+          EXPOSE 3000
+          CMD ["node", "server.js"]
+          EOF
+        fi
+
     - name: Build Docker image
-      run: docker build -t myapp .
+      run: |
+        cd app
+        docker build -t $APP_NAME .
 
     - name: Tag image
       run: docker tag myapp:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$APP_NAME:latest
