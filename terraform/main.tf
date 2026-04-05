@@ -34,7 +34,7 @@ resource "aws_security_group" "myapp_sg" {
 # IAM ROLE
 # -------------------------
 resource "aws_iam_role" "ec2_role" {
-  name = "ec2-ecr-role-auto"
+  name = "ec2-ecr-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -63,7 +63,7 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 # -------------------------
 resource "aws_instance" "myapp" {
   ami           = "ami-045443a70fafb8bbc"
-  instance_type = "t2.micro"
+  instance_type = "t3.micro"
 
   key_name = "devops-key"
 
