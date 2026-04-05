@@ -118,17 +118,28 @@ jobs:
         chmod 600 key.pem
 
         ssh -o StrictHostKeyChecking=no -i key.pem ec2-user@$EC2_IP << EOF
-          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
-          docker stop $APP_NAME || true
-          docker rm $APP_NAME || true
+          # Install Docker if not installed
+          if ! command -v docker &> /dev/null; then
+            sudo yum update -y
+            sudo amazon-linux-extras install docker -y
+          fi
 
-          docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$APP_NAME:latest
+          # Start Docker
+          sudo systemctl start docker
+          sudo systemctl enable docker
 
-          docker run -d -p 80:3000 --name $APP_NAME $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$APP_NAME:latest
-        EOF
-      env:
-        EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          # Give permission to ec2-user
+          sudo usermod -aG docker ec2-user
+
+          # Login to ECR
+          aws ecr get-login-password --region $AWS_REGION | sudo docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
+          # Stop & remove old container
+          sudo docker stop $APP_NAME || true
+          sudo docker rm $APP_NAME || true
+          env:
+            EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
 
     - name: Cleanup on failure
       if: failure()
