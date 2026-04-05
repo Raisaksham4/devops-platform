@@ -69,14 +69,12 @@ jobs:
         if [ ! -f Dockerfile ]; then
           echo "No Dockerfile found. Creating one..."
 
-          cat <<EOF > Dockerfile
-          FROM node:18
-          WORKDIR /app
-          COPY . .
-          RUN npm install
-          EXPOSE 3000
-          CMD ["node", "server.js"]
-          EOF
+          echo 'FROM node:18' > Dockerfile
+          echo 'WORKDIR /app' >> Dockerfile
+          echo 'COPY . .' >> Dockerfile
+          echo 'RUN npm install' >> Dockerfile
+          echo 'EXPOSE 3000' >> Dockerfile
+          echo 'CMD ["node", "server.js"]' >> Dockerfile
         fi
 
     - name: Build Docker image
