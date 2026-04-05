@@ -60,10 +60,10 @@ jobs:
         cd app
 
         if [ ! -f Dockerfile ]; then
-          echo "No Dockerfile found. Detecting project type..."
+          echo "No Dockerfile found. Detecting project structure..."
 
           if [ -f package.json ]; then
-            echo "Node.js project detected"
+            echo "Node.js app in root"
 
             echo 'FROM node:18' > Dockerfile
             echo 'WORKDIR /app' >> Dockerfile
@@ -72,8 +72,32 @@ jobs:
             echo 'EXPOSE 3000' >> Dockerfile
             echo 'CMD ["npm", "start"]' >> Dockerfile
 
+          elif [ -f backend/package.json ]; then
+            echo "Backend folder detected"
+
+            echo 'FROM node:18' > Dockerfile
+            echo 'WORKDIR /app' >> Dockerfile
+            echo 'COPY . .' >> Dockerfile
+            echo 'WORKDIR /app/backend' >> Dockerfile
+            echo 'RUN npm install' >> Dockerfile
+            echo 'EXPOSE 3000' >> Dockerfile
+            echo 'CMD ["npm", "start"]' >> Dockerfile
+
+          elif [ -f server/package.json ]; then
+            echo "Server folder detected"
+
+            echo 'FROM node:18' > Dockerfile
+            echo 'WORKDIR /app' >> Dockerfile
+            echo 'COPY . .' >> Dockerfile
+            echo 'WORKDIR /app/server' >> Dockerfile
+            echo 'RUN npm install' >> Dockerfile
+            echo 'EXPOSE 3000' >> Dockerfile
+            echo 'CMD ["npm", "start"]' >> Dockerfile
+
           else
-            echo "Unknown project type ❌"
+            echo "Unknown project structure ❌"
+            echo "Files in repo:"
+            ls -R
             exit 1
           fi
         fi
