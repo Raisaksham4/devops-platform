@@ -34,7 +34,7 @@ resource "aws_security_group" "myapp_sg" {
 # IAM ROLE
 # -------------------------
 resource "aws_iam_role" "ec2_role" {
-  name = "ec2-ecr-role"
+  name = "ec2-ecr-role-auto"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
