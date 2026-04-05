@@ -63,7 +63,7 @@ jobs:
       # -------------------------
       - name: Deploy to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no -i <your-key>.pem ec2-user@$EC2_IP "
+          ssh -o StrictHostKeyChecking=no -i devops-key.pem ec2-user@$EC2_IP "
           aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 065636181497.dkr.ecr.ap-south-1.amazonaws.com &&
           docker stop myapp || true &&
           docker rm myapp || true &&
